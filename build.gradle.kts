@@ -18,16 +18,28 @@ repositories {
 }
 
 dependencies {
-	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-	implementation("org.mapstruct:mapstruct:1.5.5.Final")
+	//Jwt Token Dependency
 	implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+	//Mapper Dependency
+	implementation("org.mapstruct:mapstruct:1.5.5.Final")
+	//Spring data jpa for Sql Databases
+	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+
+	//Spring-Data-Mongo for Mongo-Db
 	implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
+	//Dependencies for  caching
 	implementation("org.springframework.boot:spring-boot-starter-data-redis")
+	implementation("org.springframework.boot:spring-boot-starter-cache")
+	//Spring -Security
 	implementation("org.springframework.boot:spring-boot-starter-security")
+	//for Validating the incoming data from client side through dto classes
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
+	//Lombok dependencies for short code
 	compileOnly("org.projectlombok:lombok")
+	//Spring dev tools
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
+	//Postgress-sql driver
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")

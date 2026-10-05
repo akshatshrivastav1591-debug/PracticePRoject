@@ -9,12 +9,15 @@ import com.UpgradingSkillsDemo.Test.CRUD.Pojo.ProductPojo;
 import com.UpgradingSkillsDemo.Test.CRUD.Repo.ProductRepo;
 import com.UpgradingSkillsDemo.Test.GlobalExceptionHandeller.CustomException.ProductClassExceptions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.List;
+
 
 @Service
 public class ProductService {
@@ -22,6 +25,9 @@ public class ProductService {
     ProductMapper productMapper;
     @Autowired
     ProductRepo productRepo;
+    @Autowired
+    RedisTemplate<String,Object> redisTemplate;
+    private  static  final String generalKey="product";
     public ResponseEntity<ApiWrapperClass<String>> addNewProduct(ProductRequestDto newProduct) {
         ProductPojo newProductPojo=productMapper.productRequestDtoToProductPojo(newProduct);
         newProductPojo.setLaunchDate(LocalDateTime.now());
@@ -31,34 +37,47 @@ public class ProductService {
     }
 
     public ResponseEntity<ApiWrapperClass<String>> updateProduct(UpdateProductRequestObjectDto updateProductDto) {
+          String objectKey=generalKey+updateProductDto.getProductId();
           ProductPojo oldProduct=productRepo.findById(updateProductDto.getProductId()).orElseThrow(ProductClassExceptions::notFound);
           ProductPojo updatedProduct=productMapper.updatedRequestProductDtoToProductPojo(updateProductDto);
           updatedProduct.setProductSecretInfo(oldProduct.getProductSecretInfo());
           productRepo.save(updatedProduct);
+          redisTemplate.opsForHash().put(objectKey,String.valueOf(updateProductDto.getProductId()),updatedProduct);
         return ResponseEntity.ok(new ApiWrapperClass<>("Success",true,"Product Updated:"));
 
 
     }
 
     public ResponseEntity<ApiWrapperClass<String>> deleteProduct(int deleteProductId) {
+        String objectKey=generalKey+deleteProductId;
         productRepo.deleteById(deleteProductId);
+        redisTemplate.opsForHash().delete(objectKey,String.valueOf(deleteProductId));
         return ResponseEntity.ok(new ApiWrapperClass<>("Success",true,"Product Deleted:"));
     }
-
-    public ResponseEntity<ApiWrapperClass<ArrayList<ProductResponseDto>>> getAllProduct() {
+    @Cacheable(key = "'AllProducts'",value = "products",unless = "#result == null")
+    public ArrayList<ProductResponseDto> getAllProduct() {
         ArrayList<ProductResponseDto> productList=new ArrayList<>();
-        List <ProductPojo> fetchedProducts=productRepo.findAll();
-        if(fetchedProducts.isEmpty()) return ResponseEntity.ok(new ApiWrapperClass<>("No Product is Available:",true,null));
+        ArrayList <ProductPojo> fetchedProducts= (ArrayList<ProductPojo>) productRepo.findAll();
+        if(fetchedProducts.isEmpty()) return null;
 
         for (ProductPojo singleProduct:fetchedProducts){
             productList.add(productMapper.productPojoToProductResponseDto(singleProduct));
         }
-        return ResponseEntity.ok(new ApiWrapperClass<>("Success",true,productList));
-
+        return productList;
     }
 
     public ResponseEntity<ApiWrapperClass<ProductResponseDto>> getSingleProduct(int productID) {
-        ProductPojo fetchedProductPojo=productRepo.findById(productID).orElseThrow(ProductClassExceptions::notFound);
-        return ResponseEntity.ok(new ApiWrapperClass<>("Success",true,productMapper.productPojoToProductResponseDto(fetchedProductPojo)));
+    String objectKey=generalKey+productID;
+        ProductPojo cachedProductPojo = (ProductPojo) redisTemplate.opsForHash().get(objectKey, String.valueOf(productID));
+        if (cachedProductPojo != null)
+            return ResponseEntity.ok(new ApiWrapperClass<>("Success", true, productMapper.productPojoToProductResponseDto(cachedProductPojo)));
+        else {
+            ProductPojo fetchedProductPojo = productRepo.findById(productID).orElseThrow(ProductClassExceptions::notFound);
+
+            redisTemplate.opsForHash().put(objectKey, String.valueOf(fetchedProductPojo.getProductId()), fetchedProductPojo);
+            redisTemplate.expire(objectKey, Duration.ofMinutes(10));
+            return ResponseEntity.ok(new ApiWrapperClass<>("Success", true, productMapper.productPojoToProductResponseDto(fetchedProductPojo)));
+        }
     }
+
 }

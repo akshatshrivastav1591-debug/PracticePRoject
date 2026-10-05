@@ -7,13 +7,15 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
 @Document(collection = "TestinCollection")
 @AllArgsConstructor
 @NoArgsConstructor
-public class ProductPojo {
+public class ProductPojo implements Serializable {
    @Id
     private int  productId;
     private String productName;

@@ -10,9 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-
 import java.util.ArrayList;
+
 
 @RestController
 public class Controller {
@@ -21,6 +20,7 @@ public class Controller {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/addProduct")
     public ResponseEntity<ApiWrapperClass<String>> addNewProduct(@RequestBody ProductRequestDto newProduct){
+
         return productService.addNewProduct(newProduct);
     }
     @PreAuthorize("hasRole('ADMIN')")
@@ -33,10 +33,13 @@ public class Controller {
     public  ResponseEntity<ApiWrapperClass<String>>  deleteProduct(@RequestBody int  deleteProductId){
         return productService.deleteProduct(deleteProductId);
     }
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping("/getAllProducts")
     public  ResponseEntity<ApiWrapperClass<ArrayList<ProductResponseDto>>>  getAllProducts(){
-        return productService.getAllProduct();
+        ArrayList<ProductResponseDto>productList=productService.getAllProduct();
+        if(productList.isEmpty()) return ResponseEntity.ok(new ApiWrapperClass<>("No Product is Available:",true,null));
+        else return  ResponseEntity.ok(new ApiWrapperClass<>("Success",true,productList));
+
     }
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @GetMapping("/getSingleProduct/{productID}")
@@ -44,3 +47,4 @@ public class Controller {
         return productService.getSingleProduct(productID);
     }
  }
+//@Cacheable(value = "students", key = "#id", unless = "#result == null")
